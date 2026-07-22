@@ -30,14 +30,25 @@
     max-width: 720px;
   }
 
-  /* --- Clock (small, top) --- */
+  /* --- Timer area (fixed height — no layout shift) --- */
+  .timer-area {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 230px;
+    width: 100%;
+  }
+
+  /* --- Clock (bigger, white, bold) --- */
   .clock {
-    font-size: 1.4rem;
-    font-weight: 400;
-    color: #888894;
-    letter-spacing: 0.5px;
+    font-size: 2rem;
+    font-weight: 700;
+    color: #e8e8ed;
+    letter-spacing: 1px;
     font-variant-numeric: tabular-nums;
-    margin-bottom: 8px;
+    margin-bottom: 4px;
   }
 
   /* --- Timer (big) --- */
@@ -51,21 +62,10 @@
     color: #e8e8ed;
   }
 
-  .timer-display.running {
-    color: #4ade80;
-  }
-
-  .timer-display.warning {
-    color: #facc15;
-  }
-
-  .timer-display.danger {
-    color: #fb923c;
-  }
-
-  .timer-display.overtime {
-    color: #f87171;
-  }
+  .timer-display.running { color: #4ade80; }
+  .timer-display.warning { color: #facc15; }
+  .timer-display.danger  { color: #fb923c; }
+  .timer-display.overtime { color: #f87171; }
 
   .timer-label {
     font-size: 1rem;
@@ -73,6 +73,26 @@
     margin-top: 4px;
     min-height: 1.4rem;
   }
+
+  /* --- Overtime badge (absolute overlay — no layout shift) --- */
+  .overtime-badge {
+    display: none;
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #b91c1c;
+    color: #fff;
+    padding: 4px 18px;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    white-space: nowrap;
+  }
+
+  .overtime-badge.show { display: inline-block; }
 
   /* --- Preset buttons --- */
   .presets {
@@ -136,28 +156,13 @@
 
   .ctrl-btn:active { transform: scale(0.96); }
 
-  .ctrl-btn.start {
-    background: #2563eb;
-    color: #fff;
-  }
+  .ctrl-btn.start { background: #2563eb; color: #fff; }
   .ctrl-btn.start:hover { background: #3b82f6; }
-
-  .ctrl-btn.pause {
-    background: #7c3aed;
-    color: #fff;
-  }
+  .ctrl-btn.pause { background: #7c3aed; color: #fff; }
   .ctrl-btn.pause:hover { background: #8b5cf6; }
-
-  .ctrl-btn.reset {
-    background: #3f3f46;
-    color: #d4d4d8;
-  }
+  .ctrl-btn.reset { background: #3f3f46; color: #d4d4d8; }
   .ctrl-btn.reset:hover { background: #52525b; }
-
-  .ctrl-btn.extend {
-    background: #059669;
-    color: #fff;
-  }
+  .ctrl-btn.extend { background: #059669; color: #fff; }
   .ctrl-btn.extend:hover { background: #10b981; }
 
   .ctrl-btn:disabled {
@@ -199,27 +204,12 @@
     font-size: 0.9rem;
   }
 
-  /* --- Status / Extend prompt --- */
+  /* --- Status message --- */
   .status-msg {
     font-size: 1.1rem;
     min-height: 1.6rem;
     color: #a1a1ab;
   }
-
-  .overtime-badge {
-    display: none;
-    background: #b91c1c;
-    color: #fff;
-    padding: 4px 14px;
-    border-radius: 20px;
-    font-size: 0.85rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    margin-top: 4px;
-  }
-
-  .overtime-badge.show { display: inline-block; }
 
   /* --- Extend button flash animation --- */
   .ctrl-btn.extend.flash {
@@ -243,12 +233,12 @@
 <body>
 
 <div class="container">
-  <div class="clock" id="clockDisplay"></div>
-
-  <div class="timer-display" id="timerDisplay">00:00</div>
-  <div class="timer-label" id="timerLabel">Ready</div>
-
-  <div class="overtime-badge" id="overtimeBadge">⏱ OVERTIME</div>
+  <div class="timer-area" id="timerArea">
+    <div class="clock" id="clockDisplay"></div>
+    <div class="timer-display" id="timerDisplay">00:00</div>
+    <div class="timer-label" id="timerLabel">Ready</div>
+    <div class="overtime-badge" id="overtimeBadge">⏱ OVERTIME</div>
+  </div>
 
   <div class="presets" id="presets">
     <button class="preset-btn" data-minutes="5">5 min</button>
@@ -434,7 +424,6 @@ function tick() {
     state.overtimeBeepFired = false;
     playTimeUp();
     statusMsg.textContent = '⏰ Time is up!';
-    // Flash the Extend button
     extendBtn.classList.add('flash');
     setTimeout(() => extendBtn.classList.remove('flash'), 3000);
   }
@@ -444,7 +433,6 @@ function tick() {
     state.overtimeBeepFired = true;
     playUrgentBeep();
   }
-  // Reset overtime beep flag each second so it fires again at next 60s boundary
   if (state.overtime && state.remaining % 60 !== 0) {
     state.overtimeBeepFired = false;
   }
@@ -507,13 +495,8 @@ function resetTimer() {
 
 // =================== EXTEND ===================
 function quickExtend() {
-  // Add the currently selected preset duration to remaining time
   const addSec = state.selectedMinutes * 60;
-  if (state.remaining < 0) {
-    state.remaining += addSec;
-  } else {
-    state.remaining += addSec;
-  }
+  state.remaining += addSec;
   state.overtime = false;
   state.overtimeBeepFired = false;
   state.beeped5 = false;
@@ -523,7 +506,6 @@ function quickExtend() {
   statusMsg.textContent = `⏱ Extended +${state.selectedMinutes} min`;
   setTimeout(() => { if (!state.overtime) statusMsg.textContent = ''; }, 3000);
 
-  // If timer isn't running, start it
   if (!state.running && state.remaining > 0) {
     state.paused = false;
     if (audioCtx.state === 'suspended') audioCtx.resume();
@@ -552,11 +534,9 @@ presetsContainer.addEventListener('click', (e) => {
 
   state.selectedMinutes = mins;
 
-  // Only reset timer if NOT currently running
   if (!state.running && !state.paused) {
     setTimer(mins * 60);
   } else {
-    // Just update the label to show selected duration
     statusMsg.textContent = `Selected: +${mins} min for Extend`;
     setTimeout(() => statusMsg.textContent = '', 2000);
     updateDisplay();
