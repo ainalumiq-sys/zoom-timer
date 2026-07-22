@@ -221,71 +221,17 @@
 
   .overtime-badge.show { display: inline-block; }
 
-  /* --- Extend prompt overlay --- */
-  .extend-prompt {
-    display: none;
-    position: fixed;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(0,0,0,0.7);
-    backdrop-filter: blur(4px);
-    align-items: center;
-    justify-content: center;
-    z-index: 100;
+  /* --- Extend button flash animation --- */
+  .ctrl-btn.extend.flash {
+    background: #f59e0b;
+    color: #000;
+    animation: pulse-glow 1s ease-in-out 3;
   }
 
-  .extend-prompt.show { display: flex; }
-
-  .extend-box {
-    background: #1c1c1e;
-    border: 1px solid #2c2c2e;
-    border-radius: 20px;
-    padding: 40px 48px;
-    text-align: center;
-    max-width: 420px;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  @keyframes pulse-glow {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.4); }
+    50% { box-shadow: 0 0 20px 4px rgba(245, 158, 11, 0.6); }
   }
-
-  .extend-box h2 {
-    font-size: 1.5rem;
-    margin-bottom: 8px;
-    color: #f87171;
-  }
-
-  .extend-box p {
-    color: #a1a1ab;
-    margin-bottom: 24px;
-    font-size: 1rem;
-  }
-
-  .extend-box .extend-actions {
-    display: flex;
-    gap: 12px;
-    justify-content: center;
-    flex-wrap: wrap;
-  }
-
-  .extend-box .extend-actions button {
-    padding: 12px 28px;
-    border-radius: 10px;
-    border: none;
-    font-size: 1rem;
-    font-weight: 500;
-    cursor: pointer;
-    font-family: inherit;
-    transition: all 0.1s ease;
-  }
-
-  .extend-box .extend-actions button:active { transform: scale(0.96); }
-
-  .extend-box .extend-actions .btn-extend-1m { background: #2563eb; color: #fff; }
-  .extend-box .extend-actions .btn-extend-5m { background: #059669; color: #fff; }
-  .extend-box .extend-actions .btn-extend-10m { background: #7c3aed; color: #fff; }
-  .extend-box .extend-actions .btn-extend-stop { background: #3f3f46; color: #d4d4d8; }
-
-  .extend-box .extend-actions .btn-extend-1m:hover { background: #3b82f6; }
-  .extend-box .extend-actions .btn-extend-5m:hover { background: #10b981; }
-  .extend-box .extend-actions .btn-extend-10m:hover { background: #8b5cf6; }
-  .extend-box .extend-actions .btn-extend-stop:hover { background: #52525b; }
 
   @media (max-width: 480px) {
     .timer-display { font-size: 4.5rem; }
@@ -295,19 +241,6 @@
 </style>
 </head>
 <body>
-
-<div class="extend-prompt" id="extendPrompt">
-  <div class="extend-box">
-    <h2>⏰ Time's Up!</h2>
-    <p>Meeting timer has expired. Extend or stop?</p>
-    <div class="extend-actions">
-      <button class="btn-extend-1m" onclick="extendTimer(1)">+1 min</button>
-      <button class="btn-extend-5m" onclick="extendTimer(5)">+5 min</button>
-      <button class="btn-extend-10m" onclick="extendTimer(10)">+10 min</button>
-      <button class="btn-extend-stop" onclick="dismissExtend()">✕ Stop</button>
-    </div>
-  </div>
-</div>
 
 <div class="container">
   <div class="clock" id="clockDisplay"></div>
@@ -339,7 +272,7 @@
     <button class="ctrl-btn start" id="startBtn" onclick="startTimer()">▶ Start</button>
     <button class="ctrl-btn pause" id="pauseBtn" onclick="pauseTimer()" disabled>⏸ Pause</button>
     <button class="ctrl-btn reset" id="resetBtn" onclick="resetTimer()">↺ Reset</button>
-    <button class="ctrl-btn extend" id="extendBtn" onclick="showExtendPrompt()" disabled>+ Extend</button>
+    <button class="ctrl-btn extend" id="extendBtn" onclick="quickExtend()">+ Extend</button>
   </div>
 
   <div class="status-msg" id="statusMsg"></div>
@@ -371,7 +304,6 @@ const startBtn = document.getElementById('startBtn');
 const pauseBtn = document.getElementById('pauseBtn');
 const resetBtn = document.getElementById('resetBtn');
 const extendBtn = document.getElementById('extendBtn');
-const extendPrompt = document.getElementById('extendPrompt');
 const presetsContainer = document.getElementById('presets');
 const customRow = document.getElementById('customRow');
 const customBtn = document.getElementById('customBtn');
@@ -469,10 +401,10 @@ function updateDisplay() {
 
   overtimeBadge.classList.toggle('show', state.overtime);
 
-  startBtn.disabled = state.running || state.remaining <= 0;
+  startBtn.disabled = state.running;
   startBtn.textContent = state.running ? '▶ Start' : (state.paused ? '▶ Resume' : '▶ Start');
   pauseBtn.disabled = !state.running;
-  extendBtn.disabled = !state.overtime && state.remaining > 0;
+  extendBtn.disabled = false;
 }
 
 // =================== TIMER LOGIC ===================
@@ -486,34 +418,35 @@ function tick() {
       state.beeped5 = true;
       playWarningBeep();
       statusMsg.textContent = '⚠️ 5 minutes remaining';
-      setTimeout(() => { if (!state.overtime && state.remaining > 0) statusMsg.textContent = ''; }, 4000);
+      setTimeout(() => { if (!state.overtime) statusMsg.textContent = ''; }, 4000);
     }
     if (state.remaining <= 60 && !state.beeped1) {
       state.beeped1 = true;
       playUrgentBeep();
       statusMsg.textContent = '⚠️ 1 minute remaining!';
-      setTimeout(() => { if (!state.overtime && state.remaining > 0) statusMsg.textContent = ''; }, 4000);
+      setTimeout(() => { if (!state.overtime) statusMsg.textContent = ''; }, 4000);
     }
   }
 
+  // Hit zero → enter overtime, keep running
   if (state.remaining <= 0 && !state.overtime) {
     state.overtime = true;
     state.overtimeBeepFired = false;
     playTimeUp();
-
-    state.running = false;
-    clearInterval(state.interval);
-    state.interval = null;
-
-    updateDisplay();
-    showExtendPrompt();
     statusMsg.textContent = '⏰ Time is up!';
-    return;
+    // Flash the Extend button
+    extendBtn.classList.add('flash');
+    setTimeout(() => extendBtn.classList.remove('flash'), 3000);
   }
 
-  if (state.overtime && !state.overtimeBeepFired) {
+  // Overtime beep every 60s
+  if (state.overtime && !state.overtimeBeepFired && state.remaining % 60 === 0) {
     state.overtimeBeepFired = true;
     playUrgentBeep();
+  }
+  // Reset overtime beep flag each second so it fires again at next 60s boundary
+  if (state.overtime && state.remaining % 60 !== 0) {
+    state.overtimeBeepFired = false;
   }
 
   updateDisplay();
@@ -567,38 +500,38 @@ function resetTimer() {
   state.beeped1 = false;
   state.beeped0 = false;
   state.remaining = state.initialDuration;
-  closeExtendPrompt();
   statusMsg.textContent = '';
+  extendBtn.classList.remove('flash');
   updateDisplay();
 }
 
-function extendTimer(minutes) {
-  const secs = minutes * 60;
+// =================== EXTEND ===================
+function quickExtend() {
+  // Add the currently selected preset duration to remaining time
+  const addSec = state.selectedMinutes * 60;
+  if (state.remaining < 0) {
+    state.remaining += addSec;
+  } else {
+    state.remaining += addSec;
+  }
   state.overtime = false;
   state.overtimeBeepFired = false;
   state.beeped5 = false;
   state.beeped1 = false;
   state.beeped0 = false;
-  state.remaining = secs;
-  state.initialDuration = state.initialDuration + secs;
-  state.paused = false;
-  closeExtendPrompt();
-  statusMsg.textContent = `⏱ Extended +${minutes} min`;
+  extendBtn.classList.remove('flash');
+  statusMsg.textContent = `⏱ Extended +${state.selectedMinutes} min`;
   setTimeout(() => { if (!state.overtime) statusMsg.textContent = ''; }, 3000);
-  startTimer();
-}
 
-function showExtendPrompt() {
-  extendPrompt.classList.add('show');
-}
+  // If timer isn't running, start it
+  if (!state.running && state.remaining > 0) {
+    state.paused = false;
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    state.running = true;
+    state.interval = setInterval(tick, 1000);
+  }
 
-function dismissExtend() {
-  closeExtendPrompt();
-  statusMsg.textContent = '⏹ Stopped';
-}
-
-function closeExtendPrompt() {
-  extendPrompt.classList.remove('show');
+  updateDisplay();
 }
 
 // =================== PRESETS ===================
@@ -618,7 +551,16 @@ presetsContainer.addEventListener('click', (e) => {
   btn.classList.add('active');
 
   state.selectedMinutes = mins;
-  setTimer(mins * 60);
+
+  // Only reset timer if NOT currently running
+  if (!state.running && !state.paused) {
+    setTimer(mins * 60);
+  } else {
+    // Just update the label to show selected duration
+    statusMsg.textContent = `Selected: +${mins} min for Extend`;
+    setTimeout(() => statusMsg.textContent = '', 2000);
+    updateDisplay();
+  }
 });
 
 function applyCustom() {
@@ -632,7 +574,14 @@ function applyCustom() {
   customRow.style.display = 'none';
 
   state.selectedMinutes = Math.ceil(total / 60);
-  setTimer(total);
+
+  if (!state.running && !state.paused) {
+    setTimer(total);
+  } else {
+    statusMsg.textContent = `Selected: +${Math.ceil(total / 60)} min for Extend`;
+    setTimeout(() => statusMsg.textContent = '', 2000);
+    updateDisplay();
+  }
 }
 
 // =================== KEYBOARD SHORTCUTS ===================
@@ -650,8 +599,7 @@ document.addEventListener('keydown', (e) => {
       break;
     case 'e':
     case 'E':
-      if (state.overtime) showExtendPrompt();
-      else if (state.remaining <= 0) showExtendPrompt();
+      quickExtend();
       break;
   }
 });
