@@ -9,7 +9,7 @@
   :root {
     /* CLOCK */
     --clock-font-size: 3rem;       /* font-size px = 48px */
-    --clock-margin-bottom: 2px;    /* jarak clock ke timer */
+    --clock-margin-bottom: 1.5px;  /* jarak clock ke timer */
     --clock-font-weight: 700;
     --clock-color: #e8e8ed;
     --clock-letter-spacing: 1px;
@@ -50,7 +50,8 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
+    padding-top: 20px;
     user-select: none;
     overflow: hidden;
   }
@@ -97,7 +98,7 @@
     color: var(--timer-color-normal);
     width: 100%;
     text-align: center;
-    padding: 0 20px;
+    padding: 0 10px;
     overflow: hidden;
     white-space: nowrap;
     text-overflow: ellipsis;
