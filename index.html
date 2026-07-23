@@ -5,6 +5,41 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Zoom Meeting Timer</title>
 <style>
+  /* ========== ADJUSTABLE VARIABLES ========== */
+  :root {
+    /* CLOCK */
+    --clock-font-size: 3rem;       /* font-size px = 48px */
+    --clock-margin-bottom: 2px;    /* jarak clock ke timer */
+    --clock-font-weight: 700;
+    --clock-color: #e8e8ed;
+    --clock-letter-spacing: 1px;
+
+    /* TIMER DISPLAY */
+    --timer-font-size: 7rem;       /* font-size px = 112px */
+    --timer-color-normal: #e8e8ed;
+    --timer-color-running: #4ade80;
+    --timer-color-warning: #facc15;
+    --timer-color-danger: #fb923c;
+    --timer-color-overtime: #f87171;
+
+    /* TIMER LABEL */
+    --label-font-size: 1rem;       /* "X remaining" */
+    --label-color: #666;
+    --label-margin-top: 4px;
+    --label-overtime-bg: #b91c1c;  /* background merah pas overtime */
+    --label-overtime-color: #fff;  /* teks putih pas overtime */
+    --label-overtime-padding: 4px 14px;
+    --label-overtime-radius: 8px;
+
+    /* TIMER AREA */
+    --timer-area-min-height: 230px;
+
+    /* CONTAINER */
+    --container-gap: 12px;
+    --container-padding: 40px;
+    --container-max-width: 720px;
+  }
+
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
   body {
@@ -24,75 +59,65 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 12px;
-    padding: 40px;
+    gap: var(--container-gap);
+    padding: var(--container-padding);
     width: 100%;
-    max-width: 720px;
+    max-width: var(--container-max-width);
   }
 
-  /* --- Timer area (fixed height — no layout shift) --- */
+  /* --- Timer area (fixed height) --- */
   .timer-area {
-    position: relative;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    min-height: 230px;
+    min-height: var(--timer-area-min-height);
     width: 100%;
   }
 
-  /* --- Clock (bigger, white, bold) --- */
+  /* --- Clock --- */
   .clock {
-    font-size: 2rem;
-    font-weight: 700;
-    color: #e8e8ed;
-    letter-spacing: 1px;
+    font-size: var(--clock-font-size);
+    font-weight: var(--clock-font-weight);
+    color: var(--clock-color);
+    letter-spacing: var(--clock-letter-spacing);
     font-variant-numeric: tabular-nums;
-    margin-bottom: 4px;
+    margin-bottom: var(--clock-margin-bottom);
   }
 
   /* --- Timer (big) --- */
   .timer-display {
-    font-size: 7rem;
+    font-size: var(--timer-font-size);
     font-weight: 600;
     letter-spacing: 2px;
     font-variant-numeric: tabular-nums;
     line-height: 1;
     transition: color 0.3s ease;
-    color: #e8e8ed;
+    color: var(--timer-color-normal);
   }
 
-  .timer-display.running { color: #4ade80; }
-  .timer-display.warning { color: #facc15; }
-  .timer-display.danger  { color: #fb923c; }
-  .timer-display.overtime { color: #f87171; }
+  .timer-display.running  { color: var(--timer-color-running); }
+  .timer-display.warning  { color: var(--timer-color-warning); }
+  .timer-display.danger   { color: var(--timer-color-danger); }
+  .timer-display.overtime { color: var(--timer-color-overtime); }
 
+  /* --- Timer label (subtitle) --- */
   .timer-label {
-    font-size: 1rem;
-    color: #666;
-    margin-top: 4px;
+    font-size: var(--label-font-size);
+    color: var(--label-color);
+    margin-top: var(--label-margin-top);
     min-height: 1.4rem;
+    transition: all 0.3s ease;
+    border-radius: 0;
+    padding: 0;
   }
 
-  /* --- Overtime badge (absolute overlay — no layout shift) --- */
-  .overtime-badge {
-    display: none;
-    position: absolute;
-    bottom: 0;
-    left: 50%;
-    transform: translateX(-50%);
-    background: #b91c1c;
-    color: #fff;
-    padding: 4px 18px;
-    border-radius: 20px;
-    font-size: 0.9rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 2px;
-    white-space: nowrap;
+  .timer-label.overtime {
+    color: var(--label-overtime-color);
+    background: var(--label-overtime-bg);
+    padding: var(--label-overtime-padding);
+    border-radius: var(--label-overtime-radius);
   }
-
-  .overtime-badge.show { display: inline-block; }
 
   /* --- Preset buttons --- */
   .presets {
@@ -156,12 +181,12 @@
 
   .ctrl-btn:active { transform: scale(0.96); }
 
-  .ctrl-btn.start { background: #2563eb; color: #fff; }
-  .ctrl-btn.start:hover { background: #3b82f6; }
-  .ctrl-btn.pause { background: #7c3aed; color: #fff; }
-  .ctrl-btn.pause:hover { background: #8b5cf6; }
-  .ctrl-btn.reset { background: #3f3f46; color: #d4d4d8; }
-  .ctrl-btn.reset:hover { background: #52525b; }
+  .ctrl-btn.start  { background: #2563eb; color: #fff; }
+  .ctrl-btn.start:hover  { background: #3b82f6; }
+  .ctrl-btn.pause  { background: #7c3aed; color: #fff; }
+  .ctrl-btn.pause:hover  { background: #8b5cf6; }
+  .ctrl-btn.reset  { background: #3f3f46; color: #d4d4d8; }
+  .ctrl-btn.reset:hover  { background: #52525b; }
   .ctrl-btn.extend { background: #059669; color: #fff; }
   .ctrl-btn.extend:hover { background: #10b981; }
 
@@ -237,7 +262,6 @@
     <div class="clock" id="clockDisplay"></div>
     <div class="timer-display" id="timerDisplay">00:00</div>
     <div class="timer-label" id="timerLabel">Ready</div>
-    <div class="overtime-badge" id="overtimeBadge">⏱ OVERTIME</div>
   </div>
 
   <div class="presets" id="presets">
@@ -289,7 +313,6 @@ const timerDisplay = document.getElementById('timerDisplay');
 const timerLabel = document.getElementById('timerLabel');
 const clockDisplay = document.getElementById('clockDisplay');
 const statusMsg = document.getElementById('statusMsg');
-const overtimeBadge = document.getElementById('overtimeBadge');
 const startBtn = document.getElementById('startBtn');
 const pauseBtn = document.getElementById('pauseBtn');
 const resetBtn = document.getElementById('resetBtn');
@@ -381,15 +404,16 @@ function updateDisplay() {
   if (state.overtime) {
     const ot = Math.abs(state.remaining);
     timerLabel.textContent = `Overtime: +${formatDuration(Math.floor(ot))}`;
+    timerLabel.classList.add('overtime');
   } else if (state.running || state.paused) {
     timerLabel.textContent = `${formatDuration(Math.floor(state.remaining))} remaining`;
+    timerLabel.classList.remove('overtime');
   } else {
     timerLabel.textContent = state.initialDuration > 0
       ? `${formatDuration(state.initialDuration)} — Ready`
       : 'Ready';
+    timerLabel.classList.remove('overtime');
   }
-
-  overtimeBadge.classList.toggle('show', state.overtime);
 
   startBtn.disabled = state.running;
   startBtn.textContent = state.running ? '▶ Start' : (state.paused ? '▶ Resume' : '▶ Start');
@@ -452,6 +476,7 @@ function setTimer(seconds) {
   state.beeped0 = false;
   state.paused = false;
   if (state.interval) { clearInterval(state.interval); state.interval = null; }
+  timerLabel.classList.remove('overtime');
   updateDisplay();
 }
 
@@ -490,6 +515,7 @@ function resetTimer() {
   state.remaining = state.initialDuration;
   statusMsg.textContent = '';
   extendBtn.classList.remove('flash');
+  timerLabel.classList.remove('overtime');
   updateDisplay();
 }
 
@@ -503,6 +529,7 @@ function quickExtend() {
   state.beeped1 = false;
   state.beeped0 = false;
   extendBtn.classList.remove('flash');
+  timerLabel.classList.remove('overtime');
   statusMsg.textContent = `⏱ Extended +${state.selectedMinutes} min`;
   setTimeout(() => { if (!state.overtime) statusMsg.textContent = ''; }, 3000);
 
