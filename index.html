@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<meta name="version" content="v11" />
+<meta name="version" content="v12" />
 <title>Zoom Meeting Timer</title>
 <style>
   /* ========== ADJUSTABLE VARIABLES ========== */
@@ -394,8 +394,25 @@ function formatDuration(sec) {
   return `${s}s`;
 }
 
+// =================== AUTOFIT ===================
+// Menjaga teks timer selalu utuh (tidak ke-ellipsis "-00:..").
+// Font-size dipakai sebesar CSS clamp-nya, otomatis mengecil HANYA
+// kalau lebar teks melebihi kontainer (mis. font sistem Linux lebih lebar).
+function autofitTimer() {
+  const el = timerDisplay;
+  el.style.fontSize = ''; // reset ke nilai CSS (clamp)
+  const availW = el.clientWidth;
+  const contentW = el.scrollWidth;
+  if (contentW > availW && contentW > 0) {
+    const curSize = parseFloat(getComputedStyle(el).fontSize);
+    const scale = (availW / contentW) * 0.97; // margin 3% biar nggak nempel
+    el.style.fontSize = `${(curSize * scale).toFixed(1)}px`;
+  }
+}
+
 function updateDisplay() {
   timerDisplay.textContent = formatTime(state.remaining);
+  autofitTimer();
 
   timerDisplay.classList.remove('running', 'warning', 'danger', 'overtime');
   if (state.overtime) {
@@ -622,6 +639,8 @@ document.addEventListener('keydown', (e) => {
 
 // =================== INIT ===================
 setTimer(30 * 60);
+autofitTimer();
+window.addEventListener('resize', autofitTimer);
 </script>
 </body>
 </html>
