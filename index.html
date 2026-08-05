@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<meta name="version" content="v12" />
+<meta name="version" content="v13" />
 <title>Zoom Meeting Timer</title>
 <style>
   /* ========== ADJUSTABLE VARIABLES ========== */
@@ -245,6 +245,20 @@
     color: #a1a1ab;
   }
 
+  /* --- Version footer (paling bawah, kecil) --- */
+  .version-footer {
+    position: fixed;
+    bottom: 6px;
+    left: 0;
+    right: 0;
+    text-align: center;
+    font-size: 1.1rem;
+    color: #55555c;
+    pointer-events: none;
+    user-select: none;
+    z-index: 10;
+  }
+
   /* --- Extend button flash animation --- */
   .ctrl-btn.extend.flash {
     background: #f59e0b;
@@ -300,6 +314,8 @@
 
   <div class="status-msg" id="statusMsg"></div>
 </div>
+
+<div class="version-footer" id="versionFooter"></div>
 
 <script>
 // =================== STATE ===================
@@ -641,6 +657,10 @@ document.addEventListener('keydown', (e) => {
 setTimer(30 * 60);
 autofitTimer();
 window.addEventListener('resize', autofitTimer);
+
+// Version footer — baca dari meta, biar ketahuan cache ke-refresh atau belum
+document.getElementById('versionFooter').textContent =
+  (document.querySelector('meta[name="version"]') || {}).content || '?';
 </script>
 </body>
 </html>
