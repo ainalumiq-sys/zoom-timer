@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<meta name="version" content="v14" />
+<meta name="version" content="v15" />
 <title>Zoom Meeting Timer</title>
 <style>
   /* ========== ADJUSTABLE VARIABLES ========== */
@@ -350,6 +350,12 @@ const presetsContainer = document.getElementById('presets');
 const customRow = document.getElementById('customRow');
 const customBtn = document.getElementById('customBtn');
 
+// =================== PICTURE-IN-PICTURE STATE ===================
+// (dideklarasi di atas karena updateClock() menyentuh pipClockEl tiap detik)
+let pipWindow = null;
+let pipTimerEl = null;
+let pipClockEl = null;
+
 // =================== AUDIO ===================
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
@@ -390,7 +396,9 @@ function updateClock() {
   const now = new Date();
   const h = String(now.getHours()).padStart(2, '0');
   const m = String(now.getMinutes()).padStart(2, '0');
-  clockDisplay.textContent = `${h}:${m}`;
+  const t = `${h}:${m}`;
+  clockDisplay.textContent = t;
+  if (pipClockEl) pipClockEl.textContent = t;
 }
 updateClock();
 setInterval(updateClock, 1000);
@@ -640,8 +648,7 @@ function applyCustom() {
 
 // =================== PICTURE-IN-PICTURE (Mini) ===================
 // Window kecil always-on-top tanpa chrome browser — timer di pojok layar.
-let pipWindow = null;
-let pipTimerEl = null;
+// (pipWindow/pipTimerEl/pipClockEl dideklarasi di atas, lihat bagian state)
 
 async function openPip() {
   if (!('documentPictureInPicture' in window)) {
@@ -651,20 +658,34 @@ async function openPip() {
   }
   try {
     if (!pipWindow) {
-      pipWindow = await documentPictureInPicture.requestWindow({ width: 300, height: 150 });
-      pipWindow.document.title = 'Zoom Timer';
+      pipWindow = await documentPictureInPicture.requestWindow({
+        width: 360, height: 170,
+        disallowReturnToOpener: true,   // hilangkan tombol "back to tab" di top bar
+        preferInitialWindowPlacement: true,
+      });
+      pipWindow.document.title = '';    // kosongkan judul → title bar lebih bersih
       pipWindow.document.body.innerHTML = `
         <style>
-          html, body { margin: 0; height: 100%; background: #0f0f11;
-            display: flex; align-items: center; justify-content: center; overflow: hidden; }
-          #pipTimer { font-family: 'Inter', system-ui, sans-serif; font-weight: 700;
-            font-size: min(22vw, 26vh); line-height: 1; color: #e8e8ed;
+          :root { color-scheme: dark; }  /* title bar ikut gelap, bukan putih */
+          html, body { margin: 0; height: 100%; background: #0f0f11; overflow: hidden;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            gap: 4px; user-select: none; }
+          #pipClock { font-family: system-ui, sans-serif; font-weight: 600;
+            font-size: min(9vw, 11vh); line-height: 1; color: #8a8a93;
             font-variant-numeric: tabular-nums; letter-spacing: 1px; }
+          #pipTimer { font-family: system-ui, sans-serif; font-weight: 700;
+            font-size: min(30vw, 38vh); line-height: 1; color: #e8e8ed;
+            font-variant-numeric: tabular-nums; letter-spacing: 1px;
+            white-space: nowrap; max-width: 100%; }
           #pipTimer.ot { color: #f87171; }
         </style>
-        <div id="pipTimer"></div>`;
+        <div id="pipClock">00:00</div>
+        <div id="pipTimer">00:00</div>`;
       pipTimerEl = pipWindow.document.getElementById('pipTimer');
-      pipWindow.addEventListener('pagehide', () => { pipWindow = null; pipTimerEl = null; });
+      pipClockEl = pipWindow.document.getElementById('pipClock');
+      pipWindow.addEventListener('pagehide', () => {
+        pipWindow = null; pipTimerEl = null; pipClockEl = null;
+      });
     } else {
       pipWindow.focus();
     }
@@ -679,6 +700,14 @@ function syncPip() {
   if (!pipTimerEl) return;
   pipTimerEl.textContent = formatTime(state.remaining);
   pipTimerEl.classList.toggle('ot', state.overtime);
+  // autofit sama kayak halaman utama: mengecil hanya kalau overflow (mis. minus overtime)
+  pipTimerEl.style.fontSize = '';
+  const availW = pipTimerEl.clientWidth;
+  const contentW = pipTimerEl.scrollWidth;
+  if (contentW > availW && contentW > 0) {
+    const cur = parseFloat(getComputedStyle(pipTimerEl).fontSize);
+    pipTimerEl.style.fontSize = `${(cur * (availW / contentW) * 0.97).toFixed(1)}px`;
+  }
 }
 
 // =================== KEYBOARD SHORTCUTS ===================
