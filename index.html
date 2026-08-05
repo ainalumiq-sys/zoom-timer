@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<meta name="version" content="v13" />
+<meta name="version" content="v14" />
 <title>Zoom Meeting Timer</title>
 <style>
   /* ========== ADJUSTABLE VARIABLES ========== */
@@ -199,6 +199,9 @@
   .ctrl-btn.extend { background: #059669; color: #fff; }
   .ctrl-btn.extend:hover { background: #10b981; }
 
+  .ctrl-btn.mini  { background: #1c1c1e; color: #a1a1ab; border: 1px solid #2c2c2e; }
+  .ctrl-btn.mini:hover { background: #2c2c2e; color: #e8e8ed; }
+
   .ctrl-btn:disabled {
     opacity: 0.3;
     cursor: not-allowed;
@@ -310,6 +313,7 @@
     <button class="ctrl-btn pause" id="pauseBtn" onclick="pauseTimer()" disabled>⏸ Pause</button>
     <button class="ctrl-btn reset" id="resetBtn" onclick="resetTimer()">↺ Reset</button>
     <button class="ctrl-btn extend" id="extendBtn" onclick="quickExtend()">+ Extend</button>
+    <button class="ctrl-btn mini" id="pipBtn" onclick="openPip()">⧉ Mini</button>
   </div>
 
   <div class="status-msg" id="statusMsg"></div>
@@ -429,6 +433,7 @@ function autofitTimer() {
 function updateDisplay() {
   timerDisplay.textContent = formatTime(state.remaining);
   autofitTimer();
+  syncPip();
 
   timerDisplay.classList.remove('running', 'warning', 'danger', 'overtime');
   if (state.overtime) {
@@ -631,6 +636,49 @@ function applyCustom() {
     setTimeout(() => statusMsg.textContent = '', 2000);
     updateDisplay();
   }
+}
+
+// =================== PICTURE-IN-PICTURE (Mini) ===================
+// Window kecil always-on-top tanpa chrome browser — timer di pojok layar.
+let pipWindow = null;
+let pipTimerEl = null;
+
+async function openPip() {
+  if (!('documentPictureInPicture' in window)) {
+    statusMsg.textContent = 'PiP tidak didukung browser ini (butuh Chrome/Brave 116+)';
+    setTimeout(() => statusMsg.textContent = '', 4000);
+    return;
+  }
+  try {
+    if (!pipWindow) {
+      pipWindow = await documentPictureInPicture.requestWindow({ width: 300, height: 150 });
+      pipWindow.document.title = 'Zoom Timer';
+      pipWindow.document.body.innerHTML = `
+        <style>
+          html, body { margin: 0; height: 100%; background: #0f0f11;
+            display: flex; align-items: center; justify-content: center; overflow: hidden; }
+          #pipTimer { font-family: 'Inter', system-ui, sans-serif; font-weight: 700;
+            font-size: min(22vw, 26vh); line-height: 1; color: #e8e8ed;
+            font-variant-numeric: tabular-nums; letter-spacing: 1px; }
+          #pipTimer.ot { color: #f87171; }
+        </style>
+        <div id="pipTimer"></div>`;
+      pipTimerEl = pipWindow.document.getElementById('pipTimer');
+      pipWindow.addEventListener('pagehide', () => { pipWindow = null; pipTimerEl = null; });
+    } else {
+      pipWindow.focus();
+    }
+    syncPip();
+  } catch (e) {
+    statusMsg.textContent = 'Gagal buka PiP: ' + e.message;
+    setTimeout(() => statusMsg.textContent = '', 4000);
+  }
+}
+
+function syncPip() {
+  if (!pipTimerEl) return;
+  pipTimerEl.textContent = formatTime(state.remaining);
+  pipTimerEl.classList.toggle('ot', state.overtime);
 }
 
 // =================== KEYBOARD SHORTCUTS ===================
